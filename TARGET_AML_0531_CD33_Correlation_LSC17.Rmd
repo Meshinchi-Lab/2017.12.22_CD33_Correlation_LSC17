@@ -1,0 +1,100 @@
+---
+title: "CD33 and LSC17 Correlation"
+output: html_document
+---
+
+```{r setup}
+library(knitr)
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=50),tidy=TRUE, fig.align='center', fig.height = 8, fig.width = 10)
+knitr::opts_knit$set(root.dir = '~/RNA_seq_Analysis/2017.12.22_CD33_Correlation_LSC17/')
+```
+
+
+```{r message=FALSE, warning=FALSE}
+library(compareGroups)
+library(dplyr)
+```
+
+```{r}
+CD33 <- read.csv("CD33_SNPs_AAML0531_all_parameters_121817.csv", stringsAsFactors = FALSE, na.strings = "#N/A")
+
+head(CD33)
+```
+
+email with Rhonda
+CD33_SNPs_AAML0531_all_parameters_121817.xlsx
+12/22/17 
+
+Here’s the CD33 polymorphism data we have.  See column with SNP ID: rs12459419 for genotype info to correlate with LSC17 assignment.
+
+
+```{r}
+LSC17 <- read.csv("TARGET_AML_0531_LSC17_LSC3_SurvivalData_12.03.17.csv", stringsAsFactors = FALSE,
+                  row.names = 1)
+
+head(LSC17[,70:79])
+# dim(LSC17) #446 by 79 
+```
+
+
+```{r}
+CD33 <- CD33 %>%
+  left_join(., LSC17[,c(1,70:73,78:79)], by=c("USI"="TARGET.USI"))
+
+# dim(CD33)
+head(CD33)
+```
+
+```{r}
+CD33.sub <- CD33 %>%
+  filter(!is.na(LSC17_Group))  %>%
+  filter(rs12459419 != "NC")
+
+# dim(CD33.sub) #404
+head(CD33)
+```
+
+```{r}
+# write.csv(CD33.sub,"TARGET_AML_0531_CD33_with_LSC17_Scores.csv")
+```
+
+
+```{r}
+pearson <- cor.test(log10(CD33.sub$CD33.Expression..FLOW...MFI.+1), CD33.sub$LSC17_Score)
+
+# pdf("CD33_MFI_vs_LSC17_Score.pdf")
+plot(log10(CD33.sub$CD33.Expression..FLOW...MFI.+1),CD33.sub$LSC17_Score, pch=19, xlab = "Log10 MFI", ylab="LSC17_Score")
+# dev.off()
+```
+
+```{r}
+table(CD33.sub$rs12459419)
+```
+
+
+```{r}
+table(CD33.sub$LSC17_Group, CD33.sub$q4_vs_q123) 
+```
+
+
+```{r}
+dat <- CD33.sub %>%
+  select(q4_vs_q123, LSC17_Group, rs12459419)
+
+comp <- compareGroups(rs12459419 ~ ., method=4, data = dat)
+```
+
+```{r}
+tab <- createTable(comp, show.p.mul = TRUE)
+tab
+
+# export2csv(tab, file = "TARGET_AML_0531_CD33_SNP_vs_LSC17.csv")
+```
+
+
+```{r}
+plot(comp, bivar = TRUE)
+# plot(comp, bivar = TRUE, type = "pdf", file = "CD33_SNP_to_LSC17")
+```
+
+
